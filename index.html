@@ -1,0 +1,89 @@
+See the console
+
+<script type="text/javascript">
+
+var Promise = function () {
+  /* initialize promise */
+  this.isResolved = false;
+  this.isRejected = false;
+  this.doneCallbacks = [];
+  this.failCallbacks = [];
+};
+
+Promise.prototype.done = function(onResolved){
+  this.doneCallbacks.push(onResolved);
+  return this;
+}
+
+Promise.prototype.fail = function(onRejected){
+  this.failCallbacks.push(onRejected);
+  return this;
+}
+
+Promise.prototype.then = function (onResolved, onRejected) {
+  this.done(onResolved);
+  this.fail(onRejected);
+  return this;
+};
+
+Promise.prototype.resolve = function () {
+  for(ix in this.doneCallbacks){
+     this.doneCallbacks[ix].apply(this,arguments);
+  }
+  return this;
+};
+ 
+Promise.prototype.reject = function (error) {
+  for(ix in this.failCallbacks){
+     this.failCallbacks[ix](error);
+  }
+  return this;
+};
+
+Promise.when = function () {
+/* handle promises arguments and queue each */
+
+  var returnedValues = [], 
+      pendingResponses = arguments.length, 
+      promise = new Promise();
+  ;
+
+  for(ix in arguments){
+    var prom = arguments[ix];
+    
+    prom
+    .done( (function(ix){ return function(value){
+      returnedValues[ix] = value;
+      if(--pendingResponses == 0){
+        promise.resolve.apply(promise, returnedValues);
+      }
+    } ;})(ix) )
+    .fail(function(message){promise.reject(message);})
+  }
+  
+  return promise;
+  
+};
+
+
+var p = new Promise();
+var p2 = new Promise();
+
+p
+.done(function(){console.log('p done');})
+.fail(function(){console.log('p fail');});
+
+p2
+.done(function(value){console.log('p2 done', value);});
+
+setTimeout(function(){p.resolve('resolve p');}, 1000);
+setTimeout(function(){p2.resolve('resolve p2');}, 2000);
+
+Promise
+  .when(p, p2)
+  .then(
+    function(){console.log('all resolved', arguments);}, 
+    function(){console.log('some failed');}
+  );
+
+</script>
